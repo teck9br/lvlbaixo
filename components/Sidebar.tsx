@@ -9,12 +9,14 @@ import type {
 } from "@/types";
 import { ChannelList } from "./ChannelList";
 import { UserFooter } from "./UserFooter";
+import { VoiceStatusBar } from "./VoiceStatusBar";
 import { cn } from "@/lib/utils";
 
 export function Sidebar({
   appName,
   rooms,
   activeRoomId,
+  connectedRoomId,
   onSelect,
   voiceMembers,
   user,
@@ -23,10 +25,17 @@ export function Sidebar({
   onRename,
   mobileOpen,
   onCloseMobile,
+  connectedRoomName,
+  showVoiceStatusBar,
+  voiceIsMuted,
+  onToggleVoiceMute,
+  onGoToVoiceRoom,
+  onLeaveVoice,
 }: {
   appName: string;
   rooms: RoomRecord[];
   activeRoomId: string | null;
+  connectedRoomId: string | null;
   onSelect: (room: RoomRecord) => void;
   voiceMembers: Record<string, VoicePresenceParticipant[]>;
   user: SessionUser;
@@ -35,6 +44,12 @@ export function Sidebar({
   onRename: (username: string) => Promise<string | null>;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  connectedRoomName: string | null;
+  showVoiceStatusBar: boolean;
+  voiceIsMuted: boolean;
+  onToggleVoiceMute: () => void;
+  onGoToVoiceRoom: () => void;
+  onLeaveVoice: () => void;
 }) {
   return (
     <>
@@ -68,12 +83,23 @@ export function Sidebar({
         <ChannelList
           rooms={rooms}
           activeRoomId={activeRoomId}
+          connectedRoomId={connectedRoomId}
           onSelect={(room) => {
             onSelect(room);
             onCloseMobile();
           }}
           voiceMembers={voiceMembers}
         />
+
+        {showVoiceStatusBar && connectedRoomName ? (
+          <VoiceStatusBar
+            roomName={connectedRoomName}
+            isMuted={voiceIsMuted}
+            onToggleMute={onToggleVoiceMute}
+            onOpen={onGoToVoiceRoom}
+            onLeave={onLeaveVoice}
+          />
+        ) : null}
 
         <UserFooter
           user={user}

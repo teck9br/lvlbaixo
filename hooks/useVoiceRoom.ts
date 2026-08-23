@@ -8,6 +8,7 @@ import {
   Room,
   RoomEvent,
   Track,
+  type LocalAudioTrack,
   type Participant,
   type RemoteTrack,
   type RemoteTrackPublication,
@@ -20,6 +21,8 @@ import {
   SCREEN_SHARE_MAX_BITRATE_FALLBACK,
   SCREEN_SHARE_WIDTH,
 } from "@/lib/livekit/config";
+import { applyNoiseFilter } from "@/lib/livekit/noiseFilter";
+import { playChime } from "@/lib/audio/chime";
 import type { ConnectedParticipant, ConnectionStatusState, SessionUser } from "@/types";
 
 export type VoiceRoomErrorCode =
@@ -43,7 +46,7 @@ export interface RemoteScreenShare {
   track: RemoteTrack;
 }
 
-interface UseVoiceRoomResult {
+export interface UseVoiceRoomResult {
   participants: ConnectedParticipant[];
   localScreenShareTrack: import("livekit-client").LocalVideoTrack | null;
   remoteScreenShare: RemoteScreenShare | null;
@@ -184,8 +187,14 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
     const onAnyChange = () => resync(room);
 
     room
-      .on(RoomEvent.ParticipantConnected, onAnyChange)
-      .on(RoomEvent.ParticipantDisconnected, onAnyChange)
+      .on(RoomEvent.ParticipantConnected, () => {
+        playChime("join");
+        onAnyChange();
+      })
+      .on(RoomEvent.ParticipantDisconnected, () => {
+        playChime("leave");
+        onAnyChange();
+      })
       .on(RoomEvent.ActiveSpeakersChanged, onAnyChange)
       .on(RoomEvent.TrackMuted, onAnyChange)
       .on(RoomEvent.TrackUnmuted, onAnyChange)
@@ -287,6 +296,7 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
       );
 
     let cancelled = false;
+    let connectedOk = false;
 
     async function connect() {
       try {
@@ -304,7 +314,9 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
 
         await room.connect(body.url, body.token, { autoSubscribe: true });
         if (cancelled) return;
+        connectedOk = true;
         setNeedsAudioUnlock(!room.canPlaybackAudio);
+        playChime("join");
 
         try {
           await room.localParticipant.setMicrophoneEnabled(true, {
@@ -313,6 +325,13 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
             autoGainControl: true,
           });
           setMicReady(true);
+          const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)
+            ?.track as LocalAudioTrack | undefined;
+          if (micTrack) {
+            // Best-effort — falls back to the browser-level suppression
+            // above if unsupported. Never blocks the call on this.
+            applyNoiseFilter(micTrack);
+          }
         } catch (micErr) {
           const name = (micErr as DOMException).name;
           if (name === "NotAllowedError" || name === "PermissionDeniedError") {
@@ -336,6 +355,7 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
     return () => {
       cancelled = true;
       intentionalLeaveRef.current = true;
+      if (connectedOk) playChime("leave");
       room.disconnect();
       roomRef.current = null;
       audioContainer.remove();

@@ -12,11 +12,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function ChannelList({
   rooms,
   activeRoomId,
+  connectedRoomId,
   onSelect,
   voiceMembers,
 }: {
   rooms: RoomRecord[];
   activeRoomId: string | null;
+  connectedRoomId?: string | null;
   onSelect: (room: RoomRecord) => void;
   voiceMembers: Record<string, VoicePresenceParticipant[]>;
 }) {
@@ -40,6 +42,7 @@ export function ChannelList({
                   <ChannelItem
                     room={room}
                     active={room.id === activeRoomId}
+                    connected={room.id === connectedRoomId}
                     onClick={() => onSelect(room)}
                     voiceMembers={voiceMembers[room.slug]}
                   />

@@ -7,11 +7,13 @@ import type { RoomRecord, VoicePresenceParticipant } from "@/types";
 export function ChannelItem({
   room,
   active,
+  connected,
   onClick,
   voiceMembers,
 }: {
   room: RoomRecord;
   active: boolean;
+  connected?: boolean;
   onClick: () => void;
   voiceMembers?: VoicePresenceParticipant[];
 }) {
@@ -23,7 +25,7 @@ export function ChannelItem({
         type="button"
         onClick={onClick}
         aria-current={active ? "page" : undefined}
-        aria-label={`${room.type === "text" ? "Canal de texto" : "Canal de voz"} ${room.name}`}
+        aria-label={`${room.type === "text" ? "Canal de texto" : "Canal de voz"} ${room.name}${connected ? " (conectado)" : ""}`}
         className={cn(
           "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
           active
@@ -31,8 +33,15 @@ export function ChannelItem({
             : "text-text-secondary hover:bg-bg-hover/60 hover:text-text-primary",
         )}
       >
-        <Icon size={18} className="shrink-0 text-text-muted" aria-hidden="true" />
+        <Icon
+          size={18}
+          className={cn("shrink-0", connected ? "text-success" : "text-text-muted")}
+          aria-hidden="true"
+        />
         <span className="truncate">{room.name}</span>
+        {connected ? (
+          <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-success" aria-hidden="true" />
+        ) : null}
       </button>
 
       {voiceMembers && voiceMembers.length > 0 ? (

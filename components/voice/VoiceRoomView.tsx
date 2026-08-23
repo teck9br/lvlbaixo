@@ -2,21 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, Volume2, X } from "lucide-react";
-import { useVoiceRoom } from "@/hooks/useVoiceRoom";
+import type { UseVoiceRoomResult } from "@/hooks/useVoiceRoom";
 import { ParticipantGrid } from "./ParticipantGrid";
 import { ScreenShareView } from "./ScreenShareView";
 import { ControlBar } from "./ControlBar";
-import type { ConnectionStatusState, RoomRecord, SessionUser } from "@/types";
+import type { RoomRecord } from "@/types";
 
+// Presentational only — the LiveKit connection itself is owned by
+// ServerShell (via useVoiceRoom) so it survives switching to a text
+// channel. This component just renders whatever `voice` currently holds.
 export function VoiceRoomView({
   room,
-  user,
-  onConnectionStatusChange,
+  voice,
   onLeave,
 }: {
   room: RoomRecord;
-  user: SessionUser;
-  onConnectionStatusChange: (status: ConnectionStatusState) => void;
+  voice: UseVoiceRoomResult;
   onLeave: () => void;
 }) {
   const {
@@ -26,7 +27,6 @@ export function VoiceRoomView({
     capturedResolution,
     isMuted,
     isSharingScreen,
-    connectionStatus,
     needsAudioUnlock,
     enableAudio,
     error,
@@ -34,7 +34,7 @@ export function VoiceRoomView({
     toggleMute,
     toggleScreenShare,
     leave,
-  } = useVoiceRoom(room.slug, user);
+  } = voice;
 
   const [screenShareSupported, setScreenShareSupported] = useState(true);
 
@@ -46,12 +46,9 @@ export function VoiceRoomView({
     );
   }, []);
 
-  useEffect(() => {
-    onConnectionStatusChange(connectionStatus);
-  }, [connectionStatus, onConnectionStatusChange]);
-
+  const localParticipant = participants.find((p) => p.isLocal);
   const activeShare = isSharingScreen && localScreenShareTrack
-    ? { track: localScreenShareTrack, name: `${user.username} (você)` }
+    ? { track: localScreenShareTrack, name: `${localParticipant?.name ?? "Você"} (você)` }
     : remoteScreenShare
       ? { track: remoteScreenShare.track, name: remoteScreenShare.participantName }
       : null;

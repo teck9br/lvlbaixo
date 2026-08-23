@@ -8,7 +8,8 @@ import { VoiceRoomView } from "./voice/VoiceRoomView";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useVoicePresence } from "@/hooks/useVoicePresence";
-import type { ConnectionStatusState, RoomRecord, SessionUser } from "@/types";
+import { useVoiceRoom } from "@/hooks/useVoiceRoom";
+import type { RoomRecord, SessionUser } from "@/types";
 
 export function ServerShell({
   appName,
@@ -24,10 +25,21 @@ export function ServerShell({
   const [rooms, setRooms] = useState<RoomRecord[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  // The voice room actually connected via LiveKit — separate from
+  // activeRoomId (which room's screen is being *viewed*). Clicking a text
+  // channel only changes activeRoomId, so browsing text never drops the
+  // call; only picking a different voice channel, or explicitly leaving,
+  // changes this.
+  const [connectedRoomId, setConnectedRoomId] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState<ConnectionStatusState | null>(null);
   const online = useOnlineStatus();
   const voiceMembers = useVoicePresence();
+
+  const connectedRoom = useMemo(
+    () => rooms?.find((r) => r.id === connectedRoomId) ?? null,
+    [rooms, connectedRoomId],
+  );
+  const voice = useVoiceRoom(connectedRoom?.slug ?? null, user);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,17 +70,35 @@ export function ServerShell({
     [rooms, activeRoomId],
   );
 
-  const handleSelect = useCallback(
-    (room: RoomRecord) => {
-      if (activeRoom?.type === "voice" && room.id !== activeRoom.id) {
-        setVoiceStatus(null);
-      }
-      setActiveRoomId(room.id);
-    },
-    [activeRoom],
-  );
+  const handleSelect = useCallback((room: RoomRecord) => {
+    if (room.type === "voice") {
+      // Setting connectedRoomId to a new slug is what makes useVoiceRoom
+      // leave the previous voice room (if any) and join this one — see the
+      // effect dependency in hooks/useVoiceRoom.ts. Re-clicking the room
+      // you're already connected to is a no-op here (same id).
+      setConnectedRoomId(room.id);
+    }
+    setActiveRoomId(room.id);
+  }, []);
 
-  const overallStatus: ConnectionStatusState = voiceStatus ?? (online ? "connected" : "disconnected");
+  const handleLeaveVoice = useCallback(() => {
+    // Clearing connectedRoomId (rather than calling voice.leave() directly)
+    // is what makes the hook actually disconnect — its effect is keyed on
+    // the room slug, and null short-circuits it after cleanup runs.
+    setConnectedRoomId(null);
+    setActiveRoomId((current) => {
+      const stillVoice = rooms?.find((r) => r.id === current)?.type === "voice";
+      if (!stillVoice) return current;
+      const firstText = rooms?.find((r) => r.type === "text");
+      return firstText ? firstText.id : current;
+    });
+  }, [rooms]);
+
+  const goToConnectedVoiceRoom = useCallback(() => {
+    if (connectedRoomId) setActiveRoomId(connectedRoomId);
+  }, [connectedRoomId]);
+
+  const overallStatus = connectedRoomId ? voice.connectionStatus : online ? "connected" : "disconnected";
 
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-bg-app">
@@ -77,6 +107,7 @@ export function ServerShell({
           appName={appName}
           rooms={rooms}
           activeRoomId={activeRoomId}
+          connectedRoomId={connectedRoomId}
           onSelect={handleSelect}
           voiceMembers={voiceMembers}
           user={user}
@@ -85,6 +116,12 @@ export function ServerShell({
           onRename={onRename}
           mobileOpen={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
+          connectedRoomName={connectedRoom?.name ?? null}
+          showVoiceStatusBar={!!connectedRoomId && connectedRoomId !== activeRoomId}
+          voiceIsMuted={voice.isMuted}
+          onToggleVoiceMute={voice.toggleMute}
+          onGoToVoiceRoom={goToConnectedVoiceRoom}
+          onLeaveVoice={handleLeaveVoice}
         />
       ) : null}
 
@@ -118,16 +155,7 @@ export function ServerShell({
           ) : activeRoom.type === "text" ? (
             <Chat room={activeRoom} user={user} />
           ) : (
-            <VoiceRoomView
-              room={activeRoom}
-              user={user}
-              onConnectionStatusChange={setVoiceStatus}
-              onLeave={() => {
-                setVoiceStatus(null);
-                const firstText = rooms?.find((r) => r.type === "text");
-                if (firstText) setActiveRoomId(firstText.id);
-              }}
-            />
+            <VoiceRoomView room={activeRoom} voice={voice} onLeave={handleLeaveVoice} />
           )}
         </main>
       </div>
