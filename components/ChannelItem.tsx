@@ -1,42 +1,62 @@
 "use client";
 
 import { Hash, Volume2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { RoomRecord } from "@/types";
+import { cn, colorFromString, initialOf } from "@/lib/utils";
+import type { RoomRecord, VoicePresenceParticipant } from "@/types";
 
 export function ChannelItem({
   room,
   active,
   onClick,
-  voiceMemberCount,
+  voiceMembers,
 }: {
   room: RoomRecord;
   active: boolean;
   onClick: () => void;
-  voiceMemberCount?: number;
+  voiceMembers?: VoicePresenceParticipant[];
 }) {
   const Icon = room.type === "text" ? Hash : Volume2;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={active ? "page" : undefined}
-      aria-label={`${room.type === "text" ? "Canal de texto" : "Canal de voz"} ${room.name}`}
-      className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
-        active
-          ? "bg-bg-hover text-text-primary"
-          : "text-text-secondary hover:bg-bg-hover/60 hover:text-text-primary",
-      )}
-    >
-      <Icon size={18} className="shrink-0 text-text-muted" aria-hidden="true" />
-      <span className="truncate">{room.name}</span>
-      {typeof voiceMemberCount === "number" && voiceMemberCount > 0 ? (
-        <span className="ml-auto shrink-0 rounded-full bg-bg-elevated-2 px-1.5 py-0.5 text-xs text-text-muted">
-          {voiceMemberCount}
-        </span>
+    <div>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-current={active ? "page" : undefined}
+        aria-label={`${room.type === "text" ? "Canal de texto" : "Canal de voz"} ${room.name}`}
+        className={cn(
+          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+          active
+            ? "bg-bg-hover text-text-primary"
+            : "text-text-secondary hover:bg-bg-hover/60 hover:text-text-primary",
+        )}
+      >
+        <Icon size={18} className="shrink-0 text-text-muted" aria-hidden="true" />
+        <span className="truncate">{room.name}</span>
+      </button>
+
+      {voiceMembers && voiceMembers.length > 0 ? (
+        <ul className="ml-6 mt-0.5 flex flex-col gap-0.5" aria-label={`Pessoas em ${room.name}`}>
+          {voiceMembers.map((member) => (
+            <li key={member.identity}>
+              <button
+                type="button"
+                onClick={onClick}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left transition-colors hover:bg-bg-hover/60"
+              >
+                <span
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+                  style={{ backgroundColor: colorFromString(member.name) }}
+                  aria-hidden="true"
+                >
+                  {initialOf(member.name)}
+                </span>
+                <span className="truncate text-xs text-text-secondary">{member.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       ) : null}
-    </button>
+    </div>
   );
 }

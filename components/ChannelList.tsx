@@ -1,6 +1,6 @@
 "use client";
 
-import type { RoomRecord } from "@/types";
+import type { RoomRecord, VoicePresenceParticipant } from "@/types";
 import { ChannelItem } from "./ChannelItem";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -13,12 +13,12 @@ export function ChannelList({
   rooms,
   activeRoomId,
   onSelect,
-  voiceMemberCounts,
+  voiceMembers,
 }: {
   rooms: RoomRecord[];
   activeRoomId: string | null;
   onSelect: (room: RoomRecord) => void;
-  voiceMemberCounts: Record<string, number>;
+  voiceMembers: Record<string, VoicePresenceParticipant[]>;
 }) {
   const categories: Array<RoomRecord["category"]> = ["text", "voice", "afk"];
 
@@ -41,7 +41,7 @@ export function ChannelList({
                     room={room}
                     active={room.id === activeRoomId}
                     onClick={() => onSelect(room)}
-                    voiceMemberCount={voiceMemberCounts[room.slug]}
+                    voiceMembers={voiceMembers[room.slug]}
                   />
                 </li>
               ))}

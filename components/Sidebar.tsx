@@ -1,7 +1,12 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { ConnectionStatusState, RoomRecord, SessionUser } from "@/types";
+import type {
+  ConnectionStatusState,
+  RoomRecord,
+  SessionUser,
+  VoicePresenceParticipant,
+} from "@/types";
 import { ChannelList } from "./ChannelList";
 import { UserFooter } from "./UserFooter";
 import { cn } from "@/lib/utils";
@@ -11,7 +16,7 @@ export function Sidebar({
   rooms,
   activeRoomId,
   onSelect,
-  voiceMemberCounts,
+  voiceMembers,
   user,
   connectionStatus,
   onLogout,
@@ -23,7 +28,7 @@ export function Sidebar({
   rooms: RoomRecord[];
   activeRoomId: string | null;
   onSelect: (room: RoomRecord) => void;
-  voiceMemberCounts: Record<string, number>;
+  voiceMembers: Record<string, VoicePresenceParticipant[]>;
   user: SessionUser;
   connectionStatus: ConnectionStatusState;
   onLogout: () => void;
@@ -67,7 +72,7 @@ export function Sidebar({
             onSelect(room);
             onCloseMobile();
           }}
-          voiceMemberCounts={voiceMemberCounts}
+          voiceMembers={voiceMembers}
         />
 
         <UserFooter

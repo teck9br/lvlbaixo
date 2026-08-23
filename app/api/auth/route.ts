@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { checkServerPassword, getServerName } from "@/lib/auth/password";
+import { getServerName } from "@/lib/auth/password";
 import { clearSessionCookie, getSession, setSessionCookie } from "@/lib/auth/session";
 import { sanitizeUsername } from "@/lib/utils";
 
 const loginSchema = z.object({
   userId: z.string().uuid(),
   username: z.string().min(1).max(32),
-  password: z.string().min(1).max(256),
 });
 
 /** GET /api/auth — checks whether the current cookie is a valid session. */
@@ -21,7 +20,7 @@ export async function GET() {
   return NextResponse.json({ user: session, serverName });
 }
 
-/** POST /api/auth — validates the server password and opens a session. */
+/** POST /api/auth — opens a session for the given local identity. */
 export async function POST(req: NextRequest) {
   let body: unknown;
   try {
@@ -38,11 +37,6 @@ export async function POST(req: NextRequest) {
   const username = sanitizeUsername(parsed.data.username);
   if (!username) {
     return NextResponse.json({ error: "Nome inválido." }, { status: 400 });
-  }
-
-  const passwordOk = await checkServerPassword(parsed.data.password);
-  if (!passwordOk) {
-    return NextResponse.json({ error: "Senha incorreta." }, { status: 401 });
   }
 
   const { userId } = parsed.data;

@@ -12,9 +12,9 @@ interface LocalUser {
 /**
  * The device-local identity: a random id generated once and a display
  * name the person chose. Persisted in localStorage per spec §14 ("o nome
- * deve ser salvo localmente"). This is NOT the security boundary — the
- * server password + signed session cookie are — it's just "who does this
- * browser say it is" so re-entering the app doesn't ask for a name again.
+ * deve ser salvo localmente"). This is NOT a real security boundary — the
+ * signed session cookie is — it's just "who does this browser say it is"
+ * so re-entering the app doesn't ask for a name again.
  */
 export function useLocalUser() {
   const [user, setUser] = useState<LocalUser | null | undefined>(undefined); // undefined = not loaded yet
@@ -31,9 +31,9 @@ export function useLocalUser() {
     }
   }, []);
 
-  const save = useCallback((username: string) => {
+  const save = useCallback((username: string, userIdOverride?: string) => {
     setUser((prev) => {
-      const userId = prev?.userId ?? crypto.randomUUID();
+      const userId = userIdOverride ?? prev?.userId ?? crypto.randomUUID();
       const next: LocalUser = { userId, username };
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

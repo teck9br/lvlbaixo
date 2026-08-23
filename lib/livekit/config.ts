@@ -54,3 +54,11 @@ export const MIC_MAX_BITRATE = envInt("NEXT_PUBLIC_MIC_MAX_BITRATE", 32_000);
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "lvlbaixo";
 
 export const LIVEKIT_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL || "";
+
+/**
+ * The fixed set of voice-channel LiveKit room names (see
+ * supabase/seed.sql). Shared by the token route (to reject arbitrary room
+ * names) and the presence route (to know which rooms to poll) so the two
+ * never drift apart.
+ */
+export const VOICE_ROOM_SLUGS = ["cs-de-cadeira", "cs-de-rua", "gay-por"] as const;

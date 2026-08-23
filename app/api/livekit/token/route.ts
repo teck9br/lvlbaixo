@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import { createLiveKitToken } from "@/lib/livekit/token";
+import { VOICE_ROOM_SLUGS } from "@/lib/livekit/config";
 
 // Only these rooms may actually be joined as LiveKit rooms — the server
 // enforces the same fixed voice-channel list the sidebar shows, so a
 // crafted request can't join/create an arbitrary room name.
-const ALLOWED_VOICE_ROOMS = ["cs-de-cadeira", "cs-de-rua", "gay-por"];
+const ALLOWED_VOICE_ROOMS: readonly string[] = VOICE_ROOM_SLUGS;
 
 const bodySchema = z.object({
   roomName: z.string().min(1).max(64),

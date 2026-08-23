@@ -4,7 +4,6 @@ import { makeFakeSupabase } from "./helpers/fakeSupabase";
 
 vi.mock("@/lib/supabase/server", () => ({ getSupabaseAdmin: vi.fn() }));
 vi.mock("@/lib/auth/password", () => ({
-  checkServerPassword: vi.fn(),
   getServerName: vi.fn(),
 }));
 vi.mock("@/lib/auth/session", () => ({
@@ -14,7 +13,7 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { checkServerPassword, getServerName } from "@/lib/auth/password";
+import { getServerName } from "@/lib/auth/password";
 import { setSessionCookie } from "@/lib/auth/session";
 import { POST, PATCH } from "@/app/api/auth/route";
 
@@ -30,40 +29,29 @@ function postRequest(body: unknown) {
 
 beforeEach(() => {
   vi.mocked(getSupabaseAdmin).mockReset();
-  vi.mocked(checkServerPassword).mockReset();
   vi.mocked(getServerName).mockReset().mockResolvedValue("lvlbaixo");
   vi.mocked(setSessionCookie).mockReset().mockResolvedValue(undefined);
 });
 
 describe("POST /api/auth (login)", () => {
-  it("rejects an incorrect server password (401)", async () => {
-    vi.mocked(checkServerPassword).mockResolvedValue(false);
-    const res = await POST(postRequest({ userId: USER_ID, username: "Ruan", password: "wrong" }));
-    expect(res.status).toBe(401);
-    expect(setSessionCookie).not.toHaveBeenCalled();
-  });
-
-  it("rejects an invalid username (400) even with the right password", async () => {
-    vi.mocked(checkServerPassword).mockResolvedValue(true);
-    const res = await POST(postRequest({ userId: USER_ID, username: "   ", password: "changeme123" }));
+  it("rejects an invalid username (400)", async () => {
+    const res = await POST(postRequest({ userId: USER_ID, username: "   " }));
     expect(res.status).toBe(400);
   });
 
   it("blocks a banned user (403)", async () => {
-    vi.mocked(checkServerPassword).mockResolvedValue(true);
     vi.mocked(getSupabaseAdmin).mockReturnValue(
       makeFakeSupabase({
         users: { data: { id: USER_ID, is_banned: true }, error: null },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
     );
-    const res = await POST(postRequest({ userId: USER_ID, username: "Ruan", password: "changeme123" }));
+    const res = await POST(postRequest({ userId: USER_ID, username: "Ruan" }));
     expect(res.status).toBe(403);
     expect(setSessionCookie).not.toHaveBeenCalled();
   });
 
   it("logs in a new user, creates the row and opens a session", async () => {
-    vi.mocked(checkServerPassword).mockResolvedValue(true);
     vi.mocked(getSupabaseAdmin).mockReturnValue(
       makeFakeSupabase({
         users: { data: null, error: null }, // no existing row -> insert path
@@ -71,7 +59,7 @@ describe("POST /api/auth (login)", () => {
       }) as any,
     );
 
-    const res = await POST(postRequest({ userId: USER_ID, username: "  Ruan  ", password: "changeme123" }));
+    const res = await POST(postRequest({ userId: USER_ID, username: "  Ruan  " }));
     const body = await res.json();
 
     expect(res.status).toBe(200);

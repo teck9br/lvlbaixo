@@ -13,9 +13,9 @@ npm run build    # build de produção completo
 
 A suíte cobre, com mocks para Supabase/sessão (sem precisar de credenciais reais):
 
-- **Autenticação** (`__tests__/api-auth.test.ts`): senha incorreta (401), nome
-  inválido (400), usuário banido (403), login de usuário novo cria a linha
-  no banco e abre sessão (200), renomear exige sessão válida (401/200).
+- **Autenticação** (`__tests__/api-auth.test.ts`): nome inválido (400),
+  usuário banido (403), login de usuário novo cria a linha no banco e
+  abre sessão (200), renomear exige sessão válida (401/200).
 - **Geração de token LiveKit** (`__tests__/livekit-token.test.ts`): o JWT
   gerado carrega a identidade, o nome e o grant de sala corretos; erro claro
   quando as credenciais não estão configuradas.
@@ -48,8 +48,9 @@ Em vez disso, use o roteiro manual abaixo sempre que mexer em
 
 ### Pré-requisitos
 
-1. Projeto Supabase criado, com `supabase/migrations/0001_init.sql` e
-   `supabase/seed.sql` executados.
+1. Projeto Supabase criado, com `supabase/migrations/0001_init.sql`,
+   `supabase/migrations/0002_drop_access_password.sql` (se o banco já
+   existia de antes da remoção da senha) e `supabase/seed.sql` executados.
 2. Projeto no LiveKit Cloud (ou LiveKit self-hosted) com API Key/Secret.
 3. `.env.local` preenchido (veja `.env.example` e o README).
 4. `npm run dev` rodando, ou build publicado (Vercel/local).
@@ -57,17 +58,19 @@ Em vez disso, use o roteiro manual abaixo sempre que mexer em
 ### 1. Login
 
 - [ ] Abrir o app pela primeira vez → aparece "Qual é o seu nome?".
-- [ ] Digitar um nome e clicar ENTRAR → aparece "Digite a senha para entrar".
-- [ ] Digitar senha errada → mensagem de erro clara, sem travar a tela.
-- [ ] Digitar a senha correta (padrão do seed: `changeme123`) → entra no
-      servidor e vê a lista de canais na ordem: link-gc, regras,
+- [ ] Digitar um nome e clicar ENTRAR → entra direto no servidor (sem
+      senha) e vê a lista de canais na ordem: link-gc, regras,
       bate-papo-do-uol, CS de Cadeira 🎮🚨, CS de Rua, GAY POR:.
 - [ ] Recarregar a página → continua logado (cookie de sessão persistiu),
-      não pede nome/senha de novo.
+      não pede nome de novo.
+- [ ] Limpar cookies (mas manter o localStorage) e recarregar → reabre
+      sessão automaticamente usando o nome salvo localmente, sem pedir
+      nada ao usuário.
 - [ ] Alterar o nome pelo lápis no rodapé da barra lateral → nome atualiza
       em tempo real.
-- [ ] Sair (ícone de logout) → volta para a tela de senha, mas mantém o
-      nome salvo localmente.
+- [ ] Sair (ícone de logout) → volta para a tela "Qual é o seu nome?", mas
+      mantém o nome salvo localmente (digitar o mesmo nome de novo — ou
+      qualquer nome — entra sem pedir mais nada).
 
 ### 2. Chat de texto
 
@@ -85,6 +88,11 @@ Em vez disso, use o roteiro manual abaixo sempre que mexer em
       microfone → aceitar → A aparece na grade de participantes.
 - [ ] Usuário B (outro navegador/aba anônima/outro dispositivo) entra na
       mesma sala → A e B se veem na grade um do outro.
+- [ ] Na barra lateral, sob "CS de Rua", B (numa aba que NÃO entrou na
+      sala — ex. está vendo o chat de texto) vê o avatar + nome de A
+      listado abaixo do canal, sem precisar entrar (pode levar até ~6s
+      pra aparecer — é um polling em `/api/livekit/presence`). Ao sair da
+      sala, o nome some da lista em até ~6s.
 - [ ] A fala → o círculo do avatar de A pisca/realça (indicador de fala) em
       ambas as telas; ícone muda para 🟢.
 - [ ] A clica em "Microfone" para mutar → vira 🔇 para todos, botão fica

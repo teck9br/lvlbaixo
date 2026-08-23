@@ -1,11 +1,9 @@
 -- Seed data for Voice Room ("lvlbaixo").
--- Run once after 0001_init.sql. Safe to re-run (upserts by slug).
---
--- IMPORTANT: the default password below is "changeme123". Change it
--- immediately after seeding — see README.md "Como configurar o acesso".
+-- Run once after 0001_init.sql (and 0002_drop_access_password.sql on
+-- existing databases). Safe to re-run (upserts by slug).
 
-insert into server_settings (id, server_name, access_password_hash)
-values (1, 'lvlbaixo', crypt('changeme123', gen_salt('bf')))
+insert into server_settings (id, server_name)
+values (1, 'lvlbaixo')
 on conflict (id) do nothing;
 
 -- category: text

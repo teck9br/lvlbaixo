@@ -7,6 +7,7 @@ import { Chat } from "./chat/Chat";
 import { VoiceRoomView } from "./voice/VoiceRoomView";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useVoicePresence } from "@/hooks/useVoicePresence";
 import type { ConnectionStatusState, RoomRecord, SessionUser } from "@/types";
 
 export function ServerShell({
@@ -24,9 +25,9 @@ export function ServerShell({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [voiceMemberCount, setVoiceMemberCount] = useState(0);
   const [voiceStatus, setVoiceStatus] = useState<ConnectionStatusState | null>(null);
   const online = useOnlineStatus();
+  const voiceMembers = useVoicePresence();
 
   useEffect(() => {
     let cancelled = false;
@@ -61,17 +62,11 @@ export function ServerShell({
     (room: RoomRecord) => {
       if (activeRoom?.type === "voice" && room.id !== activeRoom.id) {
         setVoiceStatus(null);
-        setVoiceMemberCount(0);
       }
       setActiveRoomId(room.id);
     },
     [activeRoom],
   );
-
-  const voiceMemberCounts = useMemo(() => {
-    if (!activeRoom || activeRoom.type !== "voice") return {};
-    return { [activeRoom.slug]: voiceMemberCount };
-  }, [activeRoom, voiceMemberCount]);
 
   const overallStatus: ConnectionStatusState = voiceStatus ?? (online ? "connected" : "disconnected");
 
@@ -83,7 +78,7 @@ export function ServerShell({
           rooms={rooms}
           activeRoomId={activeRoomId}
           onSelect={handleSelect}
-          voiceMemberCounts={voiceMemberCounts}
+          voiceMembers={voiceMembers}
           user={user}
           connectionStatus={overallStatus}
           onLogout={onLogout}
@@ -126,11 +121,9 @@ export function ServerShell({
             <VoiceRoomView
               room={activeRoom}
               user={user}
-              onMemberCountChange={setVoiceMemberCount}
               onConnectionStatusChange={setVoiceStatus}
               onLeave={() => {
                 setVoiceStatus(null);
-                setVoiceMemberCount(0);
                 const firstText = rooms?.find((r) => r.type === "text");
                 if (firstText) setActiveRoomId(firstText.id);
               }}

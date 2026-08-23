@@ -5,8 +5,8 @@ create extension if not exists "pgcrypto";
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- users: one row per person who has ever entered a display name.
--- Not tied to Supabase Auth — this app uses a single shared server
--- password, not per-user accounts.
+-- Not tied to Supabase Auth — there are no per-user accounts, just a
+-- name + a signed session cookie (see lib/auth/session.ts).
 -- ─────────────────────────────────────────────────────────────────────────
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
@@ -52,13 +52,12 @@ create table if not exists messages (
 create index if not exists messages_room_created_idx on messages (room_id, created_at desc);
 
 -- ─────────────────────────────────────────────────────────────────────────
--- server_settings: single-row table holding the server name and the
--- hashed access password. Never exposed to the client.
+-- server_settings: single-row table holding the server name. Never
+-- exposed to the client.
 -- ─────────────────────────────────────────────────────────────────────────
 create table if not exists server_settings (
   id integer primary key default 1,
   server_name text not null default 'lvlbaixo',
-  access_password_hash text,
   updated_at timestamptz not null default now(),
   constraint server_settings_singleton check (id = 1)
 );
@@ -71,8 +70,8 @@ create table if not exists server_settings (
 --   * rooms + messages: readable (needed for Supabase Realtime to push
 --     postgres_changes to the chat UI), never writable by anon.
 --   * users / server_settings: no anon access at all.
--- All writes (posting a message, creating a user, checking the password,
--- minting a LiveKit token) go through Next.js API routes using the
+-- All writes (posting a message, creating a user, minting a LiveKit
+-- token) go through Next.js API routes using the
 -- service role key, which bypasses RLS and additionally checks our own
 -- signed session cookie. See lib/auth/session.ts.
 -- ─────────────────────────────────────────────────────────────────────────

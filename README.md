@@ -9,8 +9,8 @@ sem recursos que você não vai usar.
 
 - **É:** voz em tempo real, compartilhamento de tela (alvo 1920×1080/30fps
   com fallback automático), mute, chat de texto em tempo real, indicador de
-  quem está falando/mutado/compartilhando, reconexão automática, acesso
-  protegido por senha de servidor.
+  quem está falando/mutado/compartilhando, reconexão automática. Basta
+  digitar um nome para entrar — sem senha de servidor.
 - **Não é:** um clone do Discord. Sem threads, reações, bots, cargos,
   emojis customizados, upload de arquivo no chat, webcam, ou criação de
   canais pela interface — os 6 canais são fixos (veja `supabase/seed.sql`).
@@ -33,15 +33,15 @@ Todo o áudio/vídeo passa pelo LiveKit — nada de WebRTC "na mão".
 
 ```
 app/
-  page.tsx              # entrada — decide nome/senha/app
+  page.tsx              # entrada — decide nome/app
   layout.tsx
   api/
-    auth/route.ts        # POST login, GET sessão, PATCH renomear, DELETE logout
+    auth/route.ts        # POST login (por nome), GET sessão, PATCH renomear, DELETE logout
     livekit/token/route.ts  # POST — gera token temporário do LiveKit
     messages/route.ts    # GET histórico, POST enviar mensagem
     rooms/route.ts       # GET lista de canais
 components/
-  auth/                  # NameGate, PasswordGate
+  auth/                  # NameGate
   chat/                  # Chat, MessageList, MessageInput, ChatMessage
   voice/                 # VoiceRoomView, ParticipantGrid, ScreenShareView,
                           # ControlBar, MuteButton, ScreenShareButton, LeaveButton
@@ -54,11 +54,12 @@ hooks/
 lib/
   livekit/               # config centralizada (resolução/fps/bitrate) + geração de token
   supabase/               # client (anon, browser) e server (service role)
-  auth/                   # sessão assinada + checagem de senha
+  auth/                   # sessão assinada + nome do servidor
   utils.ts
 supabase/
   migrations/0001_init.sql  # schema + RLS
-  seed.sql                  # os 6 canais fixos + senha padrão
+  migrations/0002_drop_access_password.sql  # remove a antiga senha de servidor
+  seed.sql                  # os 6 canais fixos
 __tests__/                  # Vitest
 ```
 
@@ -80,31 +81,18 @@ Preencha o `.env.local` seguindo as seções abaixo.
    - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (nunca exponha esta)
 3. Abra o **SQL Editor** e rode, nesta ordem:
    - o conteúdo de `supabase/migrations/0001_init.sql`
+   - o conteúdo de `supabase/migrations/0002_drop_access_password.sql` (só
+     necessário se o banco já existia de antes da remoção da senha)
    - o conteúdo de `supabase/seed.sql`
 4. Isso cria as tabelas (`users`, `rooms`, `messages`, `server_settings`),
    as políticas de RLS (o anon key só consegue *ler* `rooms`/`messages` —
    toda escrita passa pelas API Routes com a service role key) e semeia os
-   6 canais fixos + a senha padrão `changeme123`.
+   6 canais fixos.
 5. Em **Database → Replication**, confirme que a tabela `messages` está
    habilitada para Realtime (o `supabase db push`/SQL já deixa isso
    habilitado via `alter publication supabase_realtime add table messages`
    se você usar a CLI; pelo painel, habilite manualmente em
    Database → Replication → supabase_realtime).
-
-### Trocando a senha de acesso ao servidor
-
-A senha real fica em `server_settings.access_password_hash` (hash bcrypt).
-Para trocar, rode no SQL Editor:
-
-```sql
-update server_settings
-set access_password_hash = crypt('sua-nova-senha', gen_salt('bf'))
-where id = 1;
-```
-
-Se essa tabela ainda não foi semeada, o app usa `SERVER_ACCESS_PASSWORD`
-do `.env.local` como fallback em texto puro — só para começar a testar
-localmente antes de configurar o Supabase.
 
 ## Como configurar o LiveKit
 
@@ -208,9 +196,14 @@ mudar o valor padrão (usado antes de semear o banco) via
 
 ## Limitações conhecidas (decisões conscientes de escopo)
 
+- **Sem senha de servidor**: quem tem a URL entra digitando qualquer nome —
+  não há mais um segredo compartilhado protegendo o acesso. Adequado para
+  um link que só circula dentro do grupo de amigos; se a URL vazar,
+  qualquer pessoa consegue entrar (mas ainda não consegue banir/apagar
+  nada — isso continua exigindo a service role key, só usada no servidor).
 - **Chat via anon key + RLS de leitura pública**: qualquer pessoa com a
   chave anon do Supabase consegue *ler* mensagens/canais diretamente pela
-  API do Supabase, ignorando a senha do app. É assim que o Supabase
+  API do Supabase, sem precisar nem do nome. É assim que o Supabase
   Realtime funciona no navegador. Para um grupo pequeno de amigos isso é
   um tradeoff aceitável (nada sensível trafega ali); toda **escrita**
   passa pela sessão autenticada.

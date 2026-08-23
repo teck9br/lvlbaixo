@@ -9,19 +9,24 @@ export function NameGate({
   onSubmit,
 }: {
   appName: string;
-  onSubmit: (username: string) => void;
+  onSubmit: (username: string) => Promise<string | null>; // returns error message, or null on success
 }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const clean = sanitizeUsername(value);
     if (!clean) {
       setError("Digite um nome válido.");
       return;
     }
-    onSubmit(clean);
+    setLoading(true);
+    setError(null);
+    const errMsg = await onSubmit(clean);
+    setLoading(false);
+    if (errMsg) setError(errMsg);
   }
 
   return (
@@ -55,9 +60,10 @@ export function NameGate({
         </div>
         <button
           type="submit"
-          className="w-full rounded-md bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent-hover"
+          disabled={loading}
+          className="w-full rounded-md bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
-          ENTRAR
+          {loading ? "Entrando..." : "ENTRAR"}
         </button>
       </form>
     </GateShell>

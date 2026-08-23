@@ -11,13 +11,11 @@ import type { ConnectionStatusState, RoomRecord, SessionUser } from "@/types";
 export function VoiceRoomView({
   room,
   user,
-  onMemberCountChange,
   onConnectionStatusChange,
   onLeave,
 }: {
   room: RoomRecord;
   user: SessionUser;
-  onMemberCountChange: (count: number) => void;
   onConnectionStatusChange: (status: ConnectionStatusState) => void;
   onLeave: () => void;
 }) {
@@ -47,10 +45,6 @@ export function VoiceRoomView({
       typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia,
     );
   }, []);
-
-  useEffect(() => {
-    onMemberCountChange(participants.length);
-  }, [participants.length, onMemberCountChange]);
 
   useEffect(() => {
     onConnectionStatusChange(connectionStatus);

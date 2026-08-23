@@ -36,6 +36,13 @@ export interface ConnectedParticipant {
 
 export type ConnectionStatusState = "connected" | "reconnecting" | "disconnected";
 
+/** One person currently connected to a voice room, as reported by LiveKit
+ * (via GET /api/livekit/presence) — not necessarily the viewer themselves. */
+export interface VoicePresenceParticipant {
+  identity: string;
+  name: string;
+}
+
 export interface ApiErrorBody {
   error: string;
 }

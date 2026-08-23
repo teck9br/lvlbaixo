@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalUser } from "@/hooks/useLocalUser";
 import { NameGate } from "@/components/auth/NameGate";
-import { PasswordGate } from "@/components/auth/PasswordGate";
 import { ServerShell } from "@/components/ServerShell";
 import type { SessionUser } from "@/types";
 
-type Step = "loading" | "name" | "password" | "app";
+type Step = "loading" | "name" | "app";
 
 export function AppRoot({
   appName,
@@ -16,44 +15,71 @@ export function AppRoot({
   appName: string;
   initialUser: SessionUser | null;
 }) {
-  const { user: localUser, save: saveLocalUser, clear: clearLocalUser } = useLocalUser();
+  const { user: localUser, save: saveLocalUser } = useLocalUser();
   const [step, setStep] = useState<Step>(initialUser ? "app" : "loading");
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(initialUser);
+  // Guards the one-time silent auto-login below so it never re-fires after
+  // an explicit logout (which also clears sessionUser).
+  const didAutoLoginRef = useRef(false);
 
   useEffect(() => {
-    if (sessionUser) return; // already authenticated from the server
+    if (didAutoLoginRef.current) return;
+    if (sessionUser) {
+      didAutoLoginRef.current = true;
+      return; // already authenticated from the server (valid session cookie)
+    }
     if (localUser === undefined) return; // local storage not read yet
-    // Derives the gate step from the localStorage-backed hook once it
-    // resolves — an external-system sync, not derived render state.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStep(localUser ? "password" : "name");
-  }, [localUser, sessionUser]);
+    didAutoLoginRef.current = true;
 
-  const handleName = useCallback(
-    (username: string) => {
-      saveLocalUser(username);
-      setStep("password");
-    },
-    [saveLocalUser],
-  );
+    if (!localUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStep("name");
+      return;
+    }
 
-  const handlePassword = useCallback(
-    async (password: string): Promise<string | null> => {
-      if (!localUser) return "Digite seu nome novamente.";
+    // Returning visitor with a saved local identity but no live session
+    // (e.g. the cookie expired) — the server no longer requires a
+    // password, so silently re-open a session instead of prompting again.
+    let cancelled = false;
+    setStep("loading");
+    (async () => {
       try {
         const res = await fetch("/api/auth", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: localUser.userId,
-            username: localUser.username,
-            password,
-          }),
+          body: JSON.stringify({ userId: localUser.userId, username: localUser.username }),
+        });
+        const body = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setStep("name");
+          return;
+        }
+        setSessionUser(body.user);
+        setStep("app");
+      } catch {
+        if (!cancelled) setStep("name");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [localUser, sessionUser]);
+
+  const handleName = useCallback(
+    async (username: string): Promise<string | null> => {
+      const userId = localUser?.userId ?? crypto.randomUUID();
+      try {
+        const res = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, username }),
         });
         const body = await res.json();
         if (!res.ok) {
           return body?.error || "Não foi possível entrar. Tente novamente.";
         }
+        saveLocalUser(body.user.username, userId);
         setSessionUser(body.user);
         setStep("app");
         return null;
@@ -61,7 +87,7 @@ export function AppRoot({
         return "Sem conexão com o servidor. Verifique sua internet.";
       }
     },
-    [localUser],
+    [localUser, saveLocalUser],
   );
 
   const handleLogout = useCallback(async () => {
@@ -71,14 +97,8 @@ export function AppRoot({
       // ignore network errors on logout
     }
     setSessionUser(null);
-    setStep("password");
-  }, []);
-
-  const handleSwitchName = useCallback(() => {
-    clearLocalUser();
-    setSessionUser(null);
     setStep("name");
-  }, [clearLocalUser]);
+  }, []);
 
   const handleRename = useCallback(
     async (username: string): Promise<string | null> => {
@@ -110,17 +130,6 @@ export function AppRoot({
 
   if (step === "name") {
     return <NameGate appName={appName} onSubmit={handleName} />;
-  }
-
-  if (step === "password" && localUser) {
-    return (
-      <PasswordGate
-        appName={appName}
-        username={localUser.username}
-        onBack={handleSwitchName}
-        onSubmit={handlePassword}
-      />
-    );
   }
 
   if (step === "app" && sessionUser) {
