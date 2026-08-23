@@ -1,0 +1,12 @@
+{
+  "name": "CS HUB",
+  "short_name": "CS HUB",
+  "description": "Voz e compartilhamento de tela para o grupo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e1f22",
+  "theme_color": "#1e1f22",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ]
+}
