@@ -52,6 +52,8 @@ interface UseVoiceRoomResult {
   isSharingScreen: boolean;
   micReady: boolean;
   connectionStatus: ConnectionStatusState;
+  needsAudioUnlock: boolean;
+  enableAudio: () => void;
   error: VoiceRoomError | null;
   dismissError: () => void;
   toggleMute: () => Promise<void>;
@@ -105,7 +107,9 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
   const [isSharingScreen, setIsSharingScreen] = useState(false);
   const [micReady, setMicReady] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusState>("reconnecting");
+  const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
   const [error, setError] = useState<VoiceRoomError | null>(null);
+  const audioContainerRef = useRef<HTMLDivElement | null>(null);
 
   const dismissError = useCallback(() => setError(null), []);
 
@@ -145,6 +149,18 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null);
     setConnectionStatus("reconnecting");
+    setNeedsAudioUnlock(false);
+
+    // Hidden container that holds the <audio> elements LiveKit creates for
+    // subscribed remote microphone tracks. Without an attached, mounted
+    // <audio> element, the browser never plays the audio — speaking
+    // indicators (driven by audio levels on the raw track) still work fine,
+    // which is why silence can go unnoticed without this.
+    const audioContainer = document.createElement("div");
+    audioContainer.style.display = "none";
+    audioContainer.dataset.testid = "remote-audio-container";
+    document.body.appendChild(audioContainer);
+    audioContainerRef.current = audioContainer;
 
     const room = new Room({
       adaptiveStream: true,
@@ -175,10 +191,25 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
       .on(RoomEvent.TrackUnmuted, onAnyChange)
       .on(RoomEvent.TrackPublished, onAnyChange)
       .on(RoomEvent.TrackUnpublished, onAnyChange)
-      .on(RoomEvent.TrackSubscribed, onAnyChange)
-      .on(RoomEvent.TrackUnsubscribed, onAnyChange)
+      .on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+        if (track.kind === Track.Kind.Audio) {
+          const el = track.attach();
+          el.autoplay = true;
+          audioContainerRef.current?.appendChild(el);
+        }
+        onAnyChange();
+      })
+      .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+        if (track.kind === Track.Kind.Audio) {
+          for (const el of track.detach()) el.remove();
+        }
+        onAnyChange();
+      })
       .on(RoomEvent.LocalTrackPublished, onAnyChange)
       .on(RoomEvent.LocalTrackUnpublished, onAnyChange)
+      .on(RoomEvent.AudioPlaybackStatusChanged, () => {
+        setNeedsAudioUnlock(!room.canPlaybackAudio);
+      })
       .on(RoomEvent.Reconnecting, () => setConnectionStatus("reconnecting"))
       .on(RoomEvent.Reconnected, () => {
         setConnectionStatus("connected");
@@ -273,6 +304,7 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
 
         await room.connect(body.url, body.token, { autoSubscribe: true });
         if (cancelled) return;
+        setNeedsAudioUnlock(!room.canPlaybackAudio);
 
         try {
           await room.localParticipant.setMicrophoneEnabled(true, {
@@ -306,6 +338,8 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
       intentionalLeaveRef.current = true;
       room.disconnect();
       roomRef.current = null;
+      audioContainer.remove();
+      audioContainerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomName, user.userId]);
@@ -395,6 +429,20 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
     room.disconnect();
   }, []);
 
+  const enableAudio = useCallback(() => {
+    const room = roomRef.current;
+    if (!room) return;
+    // Must run inside a user-gesture handler (e.g. an onClick) — browsers
+    // block autoplay of audio with sound until the user interacts with the
+    // page, which is exactly the case this unblocks.
+    room
+      .startAudio()
+      .then(() => setNeedsAudioUnlock(!room.canPlaybackAudio))
+      .catch(() => {
+        // ignore — status stays reflected via AudioPlaybackStatusChanged
+      });
+  }, []);
+
   return {
     participants,
     localScreenShareTrack,
@@ -404,6 +452,8 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
     isSharingScreen,
     micReady,
     connectionStatus,
+    needsAudioUnlock,
+    enableAudio,
     error,
     dismissError,
     toggleMute,
