@@ -1,4 +1,4 @@
--- Voice Room ("CS HUB") — initial schema
+-- Voice Room ("lvlbaixo") — initial schema
 -- Run this in the Supabase SQL editor, or via `supabase db push`.
 
 create extension if not exists "pgcrypto";
@@ -57,7 +57,7 @@ create index if not exists messages_room_created_idx on messages (room_id, creat
 -- ─────────────────────────────────────────────────────────────────────────
 create table if not exists server_settings (
   id integer primary key default 1,
-  server_name text not null default 'CS HUB',
+  server_name text not null default 'lvlbaixo',
   access_password_hash text,
   updated_at timestamptz not null default now(),
   constraint server_settings_singleton check (id = 1)

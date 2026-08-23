@@ -31,7 +31,7 @@ function postRequest(body: unknown) {
 beforeEach(() => {
   vi.mocked(getSupabaseAdmin).mockReset();
   vi.mocked(checkServerPassword).mockReset();
-  vi.mocked(getServerName).mockReset().mockResolvedValue("CS HUB");
+  vi.mocked(getServerName).mockReset().mockResolvedValue("lvlbaixo");
   vi.mocked(setSessionCookie).mockReset().mockResolvedValue(undefined);
 });
 
@@ -76,7 +76,7 @@ describe("POST /api/auth (login)", () => {
 
     expect(res.status).toBe(200);
     expect(body.user).toEqual({ userId: USER_ID, username: "Ruan" });
-    expect(body.serverName).toBe("CS HUB");
+    expect(body.serverName).toBe("lvlbaixo");
     expect(setSessionCookie).toHaveBeenCalledWith({ userId: USER_ID, username: "Ruan" });
   });
 });

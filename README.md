@@ -1,4 +1,4 @@
-# CS HUB
+# lvlbaixo
 
 Um "Discord privado" bem mais simples, feito para um grupo pequeno de
 amigos: canais de texto, canais de voz, microfone e **compartilhamento de

@@ -1,11 +1,11 @@
--- Seed data for Voice Room ("CS HUB").
+-- Seed data for Voice Room ("lvlbaixo").
 -- Run once after 0001_init.sql. Safe to re-run (upserts by slug).
 --
 -- IMPORTANT: the default password below is "changeme123". Change it
 -- immediately after seeding — see README.md "Como configurar o acesso".
 
 insert into server_settings (id, server_name, access_password_hash)
-values (1, 'CS HUB', crypt('changeme123', gen_salt('bf')))
+values (1, 'lvlbaixo', crypt('changeme123', gen_salt('bf')))
 on conflict (id) do nothing;
 
 -- category: text
@@ -41,7 +41,7 @@ on conflict (slug) do update set
 -- Seed the "regras" channel with a starter message so it isn't empty on
 -- first load. Guarded so re-running seed.sql doesn't duplicate it.
 insert into messages (room_id, user_id, username, content)
-select r.id, null, 'CS HUB', 'Bem-vindo(a)! Leia as regras e divirta-se. 🎮'
+select r.id, null, 'lvlbaixo', 'Bem-vindo(a)! Leia as regras e divirta-se. 🎮'
 from rooms r
 where r.slug = 'regras'
   and not exists (

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME || "CS HUB";
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "lvlbaixo";
 
 export const metadata: Metadata = {
   title: appName,

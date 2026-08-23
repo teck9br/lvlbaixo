@@ -45,5 +45,5 @@ export async function getServerName(): Promise<string> {
   } catch {
     // ignore, use fallback below
   }
-  return process.env.NEXT_PUBLIC_APP_NAME || "CS HUB";
+  return process.env.NEXT_PUBLIC_APP_NAME || "lvlbaixo";
 }

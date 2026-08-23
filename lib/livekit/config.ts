@@ -51,6 +51,6 @@ export const SCREEN_SHARE_MAX_BITRATE_FALLBACK = envInt(
 /** Mirrors LiveKit's server-recommended default for the microphone track. */
 export const MIC_MAX_BITRATE = envInt("NEXT_PUBLIC_MIC_MAX_BITRATE", 32_000);
 
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "CS HUB";
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "lvlbaixo";
 
 export const LIVEKIT_URL = process.env.NEXT_PUBLIC_LIVEKIT_URL || "";
