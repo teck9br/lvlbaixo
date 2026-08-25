@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AudioPresets,
   ConnectionQuality,
   ConnectionState,
   DisconnectReason,
@@ -415,7 +416,22 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
             frameRate: SCREEN_SHARE_FPS,
           },
           contentHint: "detail",
-          audio: false,
+          // Captures the shared tab/window/screen's audio (game or system
+          // sound) as a second track published alongside the video. The
+          // browser still decides whether to offer it — Chrome shows a
+          // "Compartilhar áudio" checkbox in the picker; if the person
+          // doesn't check it, or the OS/surface doesn't support it, no audio
+          // track is created and screen share just proceeds video-only.
+          // Voice-oriented processing is turned off since this is music/game
+          // audio, not speech — echo cancellation and noise suppression
+          // would otherwise dull or distort it.
+          audio: {
+            autoGainControl: false,
+            echoCancellation: false,
+            noiseSuppression: false,
+            channelCount: 2,
+          },
+          systemAudio: "include",
           selfBrowserSurface: "exclude",
           surfaceSwitching: "include",
         },
@@ -425,6 +441,11 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
             maxBitrate: SCREEN_SHARE_MAX_BITRATE,
             maxFramerate: SCREEN_SHARE_FPS,
           },
+          // Applies to the screen-share-audio track when one gets captured
+          // above; the video track ignores these audio-only fields.
+          audioPreset: AudioPresets.musicHighQualityStereo,
+          forceStereo: true,
+          dtx: false,
         },
       );
 

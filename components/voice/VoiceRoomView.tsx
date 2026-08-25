@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AlertTriangle, Volume2, X } from "lucide-react";
 import type { UseVoiceRoomResult } from "@/hooks/useVoiceRoom";
+import { useScreenShareSupported } from "@/hooks/useScreenShareSupported";
 import { ParticipantGrid } from "./ParticipantGrid";
 import { ScreenShareView } from "./ScreenShareView";
 import { ControlBar } from "./ControlBar";
@@ -36,15 +36,7 @@ export function VoiceRoomView({
     leave,
   } = voice;
 
-  const [screenShareSupported, setScreenShareSupported] = useState(true);
-
-  useEffect(() => {
-    // Feature-detects a browser API on mount (avoids SSR/client mismatch).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setScreenShareSupported(
-      typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia,
-    );
-  }, []);
+  const screenShareSupported = useScreenShareSupported();
 
   const localParticipant = participants.find((p) => p.isLocal);
   const activeShare = isSharingScreen && localScreenShareTrack

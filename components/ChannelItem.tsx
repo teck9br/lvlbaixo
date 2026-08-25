@@ -1,6 +1,6 @@
 "use client";
 
-import { Hash, Volume2 } from "lucide-react";
+import { Hash, MicOff, Volume2 } from "lucide-react";
 import { cn, colorFromString, initialOf } from "@/lib/utils";
 import type { RoomRecord, VoicePresenceParticipant } from "@/types";
 
@@ -61,6 +61,13 @@ export function ChannelItem({
                   {initialOf(member.name)}
                 </span>
                 <span className="truncate text-xs text-text-secondary">{member.name}</span>
+                {member.isMuted ? (
+                  <MicOff
+                    size={12}
+                    className="ml-auto shrink-0 text-text-muted"
+                    aria-label="Microfone mutado"
+                  />
+                ) : null}
               </button>
             </li>
           ))}

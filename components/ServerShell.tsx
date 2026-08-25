@@ -5,10 +5,12 @@ import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Chat } from "./chat/Chat";
 import { VoiceRoomView } from "./voice/VoiceRoomView";
+import { VoiceCallFloater } from "./voice/VoiceCallFloater";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useVoicePresence } from "@/hooks/useVoicePresence";
 import { useVoiceRoom } from "@/hooks/useVoiceRoom";
+import { useScreenShareSupported } from "@/hooks/useScreenShareSupported";
 import type { RoomRecord, SessionUser } from "@/types";
 
 export function ServerShell({
@@ -40,6 +42,7 @@ export function ServerShell({
     [rooms, connectedRoomId],
   );
   const voice = useVoiceRoom(connectedRoom?.slug ?? null, user);
+  const screenShareSupported = useScreenShareSupported();
 
   useEffect(() => {
     let cancelled = false;
@@ -159,6 +162,25 @@ export function ServerShell({
           )}
         </main>
       </div>
+
+      {connectedRoomId && connectedRoomId !== activeRoomId && !mobileOpen ? (
+        <VoiceCallFloater
+          roomName={connectedRoom?.name ?? ""}
+          isMuted={voice.isMuted}
+          isSharingScreen={voice.isSharingScreen}
+          screenShareSupported={screenShareSupported}
+          onToggleMute={voice.toggleMute}
+          onToggleScreenShare={() => {
+            // Jumps to the voice room too — otherwise the native share
+            // picker (and any resulting error, e.g. permission denied)
+            // would pop up with nowhere on screen to show its outcome.
+            goToConnectedVoiceRoom();
+            voice.toggleScreenShare();
+          }}
+          onLeave={handleLeaveVoice}
+          onOpen={goToConnectedVoiceRoom}
+        />
+      ) : null}
     </div>
   );
 }

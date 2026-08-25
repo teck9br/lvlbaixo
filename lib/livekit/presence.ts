@@ -1,5 +1,5 @@
 import "server-only";
-import { RoomServiceClient } from "livekit-server-sdk";
+import { RoomServiceClient, TrackSource } from "livekit-server-sdk";
 import type { VoicePresenceParticipant } from "@/types";
 
 /** RoomServiceClient wants an http(s) URL; the app otherwise only ever
@@ -36,10 +36,16 @@ export async function listVoicePresence(
     roomNames.map(async (roomName) => {
       try {
         const participants = await client.listParticipants(roomName);
-        const people: VoicePresenceParticipant[] = participants.map((p) => ({
-          identity: p.identity,
-          name: p.name || p.identity,
-        }));
+        const people: VoicePresenceParticipant[] = participants.map((p) => {
+          const micTrack = p.tracks.find((t) => t.source === TrackSource.MICROPHONE);
+          return {
+            identity: p.identity,
+            name: p.name || p.identity,
+            // No mic track published yet counts as muted too — same "not
+            // sending audio" semantics as the in-room isMuted state.
+            isMuted: !micTrack || micTrack.muted,
+          };
+        });
         return [roomName, people] as const;
       } catch {
         return [roomName, []] as const;

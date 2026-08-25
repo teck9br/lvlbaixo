@@ -41,6 +41,7 @@ export type ConnectionStatusState = "connected" | "reconnecting" | "disconnected
 export interface VoicePresenceParticipant {
   identity: string;
   name: string;
+  isMuted: boolean;
 }
 
 export interface ApiErrorBody {
