@@ -71,7 +71,14 @@ export function ScreenShareView({
         autoPlay
         playsInline
         muted={false}
-        className="max-h-full max-w-full object-contain"
+        // Must actually fill the box (not just cap at max-w/max-h) for two
+        // reasons: it's what makes object-contain letterbox up to the
+        // available space instead of sitting at the video's native pixel
+        // size, and LiveKit's adaptiveStream reads this element's *rendered*
+        // size to decide which resolution to request — a small unfilled box
+        // (the bug behind the tiny mobile preview) makes it ask for a small
+        // video layer even when the screen has plenty of room to show more.
+        className="h-full w-full object-contain"
         aria-label={`Tela compartilhada por ${presenterName}`}
       />
       <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">

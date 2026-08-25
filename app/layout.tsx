@@ -7,7 +7,22 @@ export const metadata: Metadata = {
   title: appName,
   description: `${appName} — voz e compartilhamento de tela para o grupo.`,
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/favicon.ico" },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    // iOS ignores the manifest's icon list for "adicionar à tela de
+    // início" and looks for this link specifically — without it, it falls
+    // back to a screenshot of the page as the home-screen icon.
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: appName,
+  },
 };
 
 export const viewport: Viewport = {
