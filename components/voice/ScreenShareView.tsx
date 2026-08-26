@@ -1,16 +1,22 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 import type { LocalVideoTrack, RemoteTrack } from "livekit-client";
 
 export function ScreenShareView({
   track,
   presenterName,
   resolution,
+  onStopWatching,
 }: {
   track: LocalVideoTrack | RemoteTrack | null;
   presenterName: string;
   resolution: { width: number; height: number } | null;
+  // Present only when watching someone else's share — lets the viewer go
+  // back to the participant grid without leaving the voice call, the same
+  // way closing a stream in Discord doesn't disconnect you.
+  onStopWatching?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -86,6 +92,16 @@ export function ScreenShareView({
         {presenterName} compartilhando
         {resolution ? ` · ${resolution.width}×${resolution.height}` : ""}
       </div>
+      {onStopWatching ? (
+        <button
+          type="button"
+          onClick={onStopWatching}
+          className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs text-white hover:bg-black/80"
+        >
+          <X size={13} aria-hidden="true" />
+          Sair da transmissão
+        </button>
+      ) : null}
     </div>
   );
 }

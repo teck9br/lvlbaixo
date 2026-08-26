@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle, Volume2, X } from "lucide-react";
 import type { UseVoiceRoomResult } from "@/hooks/useVoiceRoom";
 import { useScreenShareSupported } from "@/hooks/useScreenShareSupported";
 import { ParticipantGrid } from "./ParticipantGrid";
 import { ScreenShareView } from "./ScreenShareView";
+import { ScreenSharePrompt } from "./ScreenSharePrompt";
 import { ControlBar } from "./ControlBar";
 import type { RoomRecord } from "@/types";
 
@@ -35,6 +37,22 @@ export function VoiceRoomView({
   } = voice;
 
   const screenShareSupported = useScreenShareSupported();
+
+  // Watching a share is opt-in, like Discord: joining a room (or being in
+  // one when someone starts sharing) shows a prompt, not the video itself.
+  // Resets whenever the presenter identity changes — a new person starting
+  // to share, the same person stopping and starting again, or the share
+  // ending — so the prompt reliably reappears for the next one instead of
+  // silently carrying a stale "watching" choice into a different share.
+  // Adjusted during render (React's documented pattern for this) rather
+  // than in an effect, so there's no extra render pass after each change.
+  const currentPresenterIdentity = remoteScreenShare?.participantIdentity ?? null;
+  const [isWatching, setIsWatching] = useState(false);
+  const [watchedPresenterIdentity, setWatchedPresenterIdentity] = useState(currentPresenterIdentity);
+  if (currentPresenterIdentity !== watchedPresenterIdentity) {
+    setWatchedPresenterIdentity(currentPresenterIdentity);
+    setIsWatching(false);
+  }
 
   // Whoever is sharing sees the normal participant grid, not their own
   // outgoing feed — the screen-share panel here is only for watching
@@ -89,11 +107,16 @@ export function VoiceRoomView({
       ) : null}
 
       {activeShare ? (
-        <ScreenShareView
-          track={activeShare.track}
-          presenterName={activeShare.name}
-          resolution={null}
-        />
+        isWatching ? (
+          <ScreenShareView
+            track={activeShare.track}
+            presenterName={activeShare.name}
+            resolution={null}
+            onStopWatching={() => setIsWatching(false)}
+          />
+        ) : (
+          <ScreenSharePrompt presenterName={activeShare.name} onWatch={() => setIsWatching(true)} />
+        )
       ) : (
         <ParticipantGrid participants={participants} />
       )}
