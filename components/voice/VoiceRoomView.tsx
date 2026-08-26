@@ -22,9 +22,7 @@ export function VoiceRoomView({
 }) {
   const {
     participants,
-    localScreenShareTrack,
     remoteScreenShare,
-    capturedResolution,
     isMuted,
     isSharingScreen,
     needsAudioUnlock,
@@ -38,12 +36,13 @@ export function VoiceRoomView({
 
   const screenShareSupported = useScreenShareSupported();
 
-  const localParticipant = participants.find((p) => p.isLocal);
-  const activeShare = isSharingScreen && localScreenShareTrack
-    ? { track: localScreenShareTrack, name: `${localParticipant?.name ?? "Você"} (você)` }
-    : remoteScreenShare
-      ? { track: remoteScreenShare.track, name: remoteScreenShare.participantName }
-      : null;
+  // Whoever is sharing sees the normal participant grid, not their own
+  // outgoing feed — the screen-share panel here is only for watching
+  // someone else's share. (Their card in the grid still gets the little
+  // "sharing" icon from ParticipantCard, so it's clear the share is live.)
+  const activeShare = remoteScreenShare
+    ? { track: remoteScreenShare.track, name: remoteScreenShare.participantName }
+    : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -93,7 +92,7 @@ export function VoiceRoomView({
         <ScreenShareView
           track={activeShare.track}
           presenterName={activeShare.name}
-          resolution={isSharingScreen ? capturedResolution : null}
+          resolution={null}
         />
       ) : (
         <ParticipantGrid participants={participants} />

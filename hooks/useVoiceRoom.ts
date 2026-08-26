@@ -31,6 +31,7 @@ export type VoiceRoomErrorCode =
   | "mic-not-found"
   | "screen-share-denied"
   | "screen-share-unsupported"
+  | "screen-share-no-audio"
   | "already-sharing"
   | "token-failed"
   | "connection-failed"
@@ -72,6 +73,8 @@ const ERROR_MESSAGES: Record<VoiceRoomErrorCode, string> = {
   "screen-share-denied": "Compartilhamento de tela cancelado ou não autorizado.",
   "screen-share-unsupported":
     "Este navegador/dispositivo não suporta compartilhamento de tela.",
+  "screen-share-no-audio":
+    'Tela compartilhada, mas sem áudio. Da próxima vez, escolha "Tela inteira" (não uma janela) e marque a caixinha "Compartilhar áudio do sistema" (ou "áudio da guia") antes de confirmar, pra quem estiver assistindo ouvir o som do jogo.',
   "already-sharing": "Outra pessoa já está compartilhando a tela nesta sala.",
   "token-failed": "Não foi possível entrar na sala. Recarregue a página e tente novamente.",
   "connection-failed": "Falha na conexão com o servidor de voz. Tente novamente.",
@@ -409,7 +412,13 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
       const publication = await room.localParticipant.setScreenShareEnabled(
         true,
         {
-          video: true,
+          // Chrome's share picker opens on whichever tab (This Tab / Window /
+          // Entire Screen) the browser feels like defaulting to, and system
+          // audio is only reliably offered from "Entire Screen" on Windows —
+          // a specific app window often has no audio checkbox at all. Hinting
+          // "monitor" pre-selects that tab so the audio option is actually
+          // visible without the person having to know to click over to it.
+          video: { displaySurface: "monitor" },
           resolution: {
             width: SCREEN_SHARE_WIDTH,
             height: SCREEN_SHARE_HEIGHT,
@@ -454,6 +463,16 @@ export function useVoiceRoom(roomName: string | null, user: SessionUser): UseVoi
       const settings = track?.mediaStreamTrack.getSettings();
       if (settings?.width && settings?.height) {
         setCapturedResolution({ width: settings.width, height: settings.height });
+      }
+
+      // The browser silently drops the audio option instead of erroring —
+      // if the person picked a surface without a "compartilhar áudio"
+      // checkbox, or picked one but left it unchecked, setScreenShareEnabled
+      // above still resolves successfully with video-only. Surface that
+      // explicitly instead of letting it look like a mysteriously silent
+      // stream.
+      if (!room.localParticipant.getTrackPublication(Track.Source.ScreenShareAudio)) {
+        setError(buildError("screen-share-no-audio"));
       }
     } catch (err) {
       const name = (err as DOMException)?.name;
