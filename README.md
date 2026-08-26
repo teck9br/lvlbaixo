@@ -59,6 +59,7 @@ lib/
 supabase/
   migrations/0001_init.sql  # schema + RLS
   migrations/0002_drop_access_password.sql  # remove a antiga senha de servidor
+  migrations/0003_polls.sql  # enquetes (polls/poll_votes) + messages.poll_id
   seed.sql                  # os 6 canais fixos
 __tests__/                  # Vitest
 ```
@@ -83,16 +84,20 @@ Preencha o `.env.local` seguindo as seções abaixo.
    - o conteúdo de `supabase/migrations/0001_init.sql`
    - o conteúdo de `supabase/migrations/0002_drop_access_password.sql` (só
      necessário se o banco já existia de antes da remoção da senha)
+   - o conteúdo de `supabase/migrations/0003_polls.sql` (enquetes — cria
+     `polls`/`poll_votes` e a coluna `messages.poll_id`)
    - o conteúdo de `supabase/seed.sql`
-4. Isso cria as tabelas (`users`, `rooms`, `messages`, `server_settings`),
-   as políticas de RLS (o anon key só consegue *ler* `rooms`/`messages` —
-   toda escrita passa pelas API Routes com a service role key) e semeia os
-   6 canais fixos.
-5. Em **Database → Replication**, confirme que a tabela `messages` está
-   habilitada para Realtime (o `supabase db push`/SQL já deixa isso
-   habilitado via `alter publication supabase_realtime add table messages`
-   se você usar a CLI; pelo painel, habilite manualmente em
-   Database → Replication → supabase_realtime).
+4. Isso cria as tabelas (`users`, `rooms`, `messages`, `server_settings`,
+   `polls`, `poll_votes`), as políticas de RLS (o anon key só consegue
+   *ler* — toda escrita passa pelas API Routes com a service role key) e
+   semeia os 6 canais fixos.
+5. Em **Database → Replication**, confirme que as tabelas `messages` e
+   `poll_votes` estão habilitadas para Realtime (o `supabase db push`/SQL
+   já deixa isso habilitado via `alter publication supabase_realtime add
+   table messages` / `... add table poll_votes` se você usar a CLI; pelo
+   painel, habilite manualmente em Database → Replication →
+   supabase_realtime). Sem isso, os votos em enquetes só aparecem para
+   quem votou até a página ser recarregada.
 
 ## Como configurar o LiveKit
 
