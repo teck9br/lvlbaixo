@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Hash, WifiOff } from "lucide-react";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
+import { PollComposer } from "./PollComposer";
 import type { RoomRecord, SessionUser } from "@/types";
 
 const TOPICS: Record<string, string> = {
@@ -13,7 +15,20 @@ const TOPICS: Record<string, string> = {
 };
 
 export function Chat({ room, user }: { room: RoomRecord; user: SessionUser }) {
-  const { messages, loading, error, realtimeConnected, send } = useMessages(room.id);
+  const {
+    messages,
+    polls,
+    votesByPoll,
+    loading,
+    error,
+    realtimeConnected,
+    send,
+    createPoll,
+    vote,
+    retractVote,
+    closePoll,
+  } = useMessages(room.id);
+  const [showPollComposer, setShowPollComposer] = useState(false);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -48,10 +63,26 @@ export function Chat({ room, user }: { room: RoomRecord; user: SessionUser }) {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-border-subtle border-t-accent" />
         </div>
       ) : (
-        <MessageList messages={messages} currentUserId={user.userId} />
+        <MessageList
+          messages={messages}
+          currentUserId={user.userId}
+          polls={polls}
+          votesByPoll={votesByPoll}
+          onVote={vote}
+          onRetractVote={retractVote}
+          onClosePoll={closePoll}
+        />
       )}
 
-      <MessageInput roomName={room.name} onSend={send} />
+      <MessageInput
+        roomName={room.name}
+        onSend={send}
+        onOpenPollComposer={() => setShowPollComposer(true)}
+      />
+
+      {showPollComposer ? (
+        <PollComposer onSubmit={createPoll} onClose={() => setShowPollComposer(false)} />
+      ) : null}
     </div>
   );
 }

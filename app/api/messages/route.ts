@@ -24,13 +24,40 @@ export async function GET(req: NextRequest) {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("messages")
-      .select("id, room_id, user_id, username, content, created_at")
+      .select("id, room_id, user_id, username, content, created_at, poll_id")
       .eq("room_id", roomId)
       .order("created_at", { ascending: false })
       .limit(100);
 
     if (error) throw error;
-    return NextResponse.json({ messages: (data ?? []).reverse() });
+    const messages = (data ?? []).reverse();
+
+    // Poll messages carry their question/options/votes in separate tables
+    // (see 0003_polls.sql) — fetch those for whichever polls showed up in
+    // this page of history so the client can render them inline.
+    const pollIds = [...new Set(messages.map((m) => m.poll_id).filter((id): id is string => !!id))];
+    let polls: unknown[] = [];
+    let votes: unknown[] = [];
+    if (pollIds.length > 0) {
+      const [pollsRes, votesRes] = await Promise.all([
+        supabase
+          .from("polls")
+          .select(
+            "id, room_id, question, options, created_by_user_id, created_by_username, created_at, closed_at",
+          )
+          .in("id", pollIds),
+        supabase
+          .from("poll_votes")
+          .select("id, poll_id, option_id, user_id, username, created_at")
+          .in("poll_id", pollIds),
+      ]);
+      if (pollsRes.error) throw pollsRes.error;
+      if (votesRes.error) throw votesRes.error;
+      polls = pollsRes.data ?? [];
+      votes = votesRes.data ?? [];
+    }
+
+    return NextResponse.json({ messages, polls, votes });
   } catch (err) {
     console.error("[api/messages] falha ao buscar mensagens:", err);
     return NextResponse.json(
@@ -86,7 +113,7 @@ export async function POST(req: NextRequest) {
         username: session.username,
         content,
       })
-      .select("id, room_id, user_id, username, content, created_at")
+      .select("id, room_id, user_id, username, content, created_at, poll_id")
       .single();
 
     if (error) throw error;

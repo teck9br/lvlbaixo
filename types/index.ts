@@ -16,7 +16,33 @@ export interface MessageRecord {
   room_id: string;
   user_id: string | null;
   username: string;
-  content: string;
+  content: string | null;
+  created_at: string;
+  poll_id: string | null;
+}
+
+export interface PollOption {
+  id: string;
+  label: string;
+}
+
+export interface PollRecord {
+  id: string;
+  room_id: string;
+  question: string;
+  options: PollOption[];
+  created_by_user_id: string | null;
+  created_by_username: string;
+  created_at: string;
+  closed_at: string | null;
+}
+
+export interface PollVoteRecord {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  user_id: string;
+  username: string;
   created_at: string;
 }
 

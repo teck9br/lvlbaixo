@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown } from "lucide-react";
-import type { MessageRecord } from "@/types";
+import type { MessageRecord, PollRecord, PollVoteRecord } from "@/types";
 import { ChatMessage } from "./ChatMessage";
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
@@ -10,9 +10,19 @@ const GROUP_WINDOW_MS = 5 * 60 * 1000;
 export function MessageList({
   messages,
   currentUserId,
+  polls,
+  votesByPoll,
+  onVote,
+  onRetractVote,
+  onClosePoll,
 }: {
   messages: MessageRecord[];
   currentUserId: string;
+  polls: Record<string, PollRecord>;
+  votesByPoll: Record<string, PollVoteRecord[]>;
+  onVote: (pollId: string, optionId: string) => void;
+  onRetractVote: (pollId: string) => void;
+  onClosePoll: (pollId: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -79,6 +89,12 @@ export function MessageList({
                 message={message}
                 showHeader={showHeader}
                 isOwn={message.user_id === currentUserId}
+                currentUserId={currentUserId}
+                poll={message.poll_id ? polls[message.poll_id] : undefined}
+                votes={message.poll_id ? votesByPoll[message.poll_id] : undefined}
+                onVote={onVote}
+                onRetractVote={onRetractVote}
+                onClosePoll={onClosePoll}
               />
             );
           })

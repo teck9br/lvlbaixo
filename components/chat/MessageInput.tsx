@@ -1,14 +1,16 @@
 "use client";
 
-import { Send } from "lucide-react";
+import { ListChecks, Send } from "lucide-react";
 import { useRef, useState, type KeyboardEvent } from "react";
 
 export function MessageInput({
   roomName,
   onSend,
+  onOpenPollComposer,
 }: {
   roomName: string;
   onSend: (content: string) => Promise<string | null>;
+  onOpenPollComposer: () => void;
 }) {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
@@ -59,6 +61,15 @@ export function MessageInput({
           maxLength={4000}
           className="max-h-32 min-h-[24px] flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
         />
+        <button
+          type="button"
+          onClick={onOpenPollComposer}
+          aria-label="Criar enquete"
+          title="Criar enquete"
+          className="mb-0.5 shrink-0 rounded-md p-1.5 text-text-muted transition-colors hover:bg-bg-hover hover:text-accent"
+        >
+          <ListChecks size={18} />
+        </button>
         <button
           type="button"
           onClick={submit}
